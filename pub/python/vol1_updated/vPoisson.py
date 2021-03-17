@@ -53,9 +53,12 @@ def surfaceplot(nx, ny, u):
 def symdiff(l,k):
     from sympy import exp, sin, pi
     import sympy as sym
-    H = lambda x: exp(-16*(x-0.5)**2)*sin(l*pi*x)
+    #H = lambda x: exp(-16*(x-0.5)**2)*sin(l*pi*x)
+    #x, y = sym.symbols('x[0], x[1]')
+    #u = H(x)*H(y)
+    H = lambda x,y: 1/(pi*(k**4))*(1-(((x-0.5)*4)**2+((y-0.5)*4)**2)/(2*(k**2)))*exp(-(((x-0.5)*4)**2+((y-0.5)*4)**2)/(2*(k**2)))
     x, y = sym.symbols('x[0], x[1]')
-    u = H(x)*H(y)
+    u = H(x,y)
     u_code = sym.printing.ccode(u)
     u_code = u_code.replace('M_PI', 'pi')
     u_D = Expression(u_code, degree=4)
@@ -83,8 +86,8 @@ def vPoisson(nx=32,ny=32,debug=1):
     #pdb.set_trace()
     #printCoords(V)
 
-    l = 3
-    k = 2
+    l = 4
+    k = 4
     kappa = Expression('exp(sin(k*pi*x[0]*x[1]))', degree=1, k=k)
     #kappa = Expression('exp(sin(k*pi*x[0]) * sin(k*pi*x[1]))', degree=6, k=k)
 
