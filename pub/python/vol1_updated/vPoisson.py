@@ -15,7 +15,8 @@ import numpy
 from numpy import linalg as LA
 from scipy.sparse import csr_matrix
 from scipy.io import mmwrite
-
+from sympy import exp, sin, cos, pi, sqrt
+import sympy as sym
 import pdb
 
 def printCoords(V):
@@ -34,6 +35,17 @@ def printCoords(V):
     elif(dim == 3):
         numpy.savetxt("mat.coords", coords, header=header, comments='', fmt="%24.15e %24.15e %24.15e")
 
+
+def is_pos_def(A):
+    if numpy.array_equal(A, A.T):
+        try:
+            numpy.linalg.cholesky(A)
+            return True
+        except numpy.linalg.LinAlgError:
+            return False
+    else:
+        return False
+
 def surfaceplot(nx, ny, u):
     V = u.function_space()
     v2d = vertex_to_dof_map(V)
@@ -50,53 +62,65 @@ def surfaceplot(nx, ny, u):
                            rstride=1, cstride=1)
     fig.colorbar(surf)
 
-def symdiff(l,k):
-    from sympy import exp, sin, pi
-    import sympy as sym
-    #H = lambda x: exp(-16*(x-0.5)**2)*sin(l*pi*x)
-    #x, y = sym.symbols('x[0], x[1]')
-    #u = H(x)*H(y)
-    H = lambda x,y: 1/(pi*(k**4))*(1-(((x-0.5)*4)**2+((y-0.5)*4)**2)/(2*(k**2)))*exp(-(((x-0.5)*4)**2+((y-0.5)*4)**2)/(2*(k**2)))
+def sympydiff(kappa, u):
     x, y = sym.symbols('x[0], x[1]')
-    u = H(x,y)
-    u_code = sym.printing.ccode(u)
-    u_code = u_code.replace('M_PI', 'pi')
-    u_D = Expression(u_code, degree=4)
-    #
-    K = lambda x,y: exp(sin(k*pi*x*y))
-    kappa = K(x,y)
     f = sym.diff(-kappa*sym.diff(u, x), x) + \
         sym.diff(-kappa*sym.diff(u, y), y)
     f = sym.simplify(f)
-    f_code = sym.printing.ccode(f)
-    f_code = f_code.replace('M_PI', 'pi')
-    f = Expression(f_code, degree=1)
+    return f
 
-    #print('C code for u:', u_code)
-    #print('C code for f:', f_code)
-    #pdb.set_trace()
+def sympy2expression(u_sym,degree=1,printit=0):
+    u_code = sym.printing.ccode(u_sym)
+    u_code = u_code.replace('M_PI', 'pi')
+    if printit:
+        print('C code:', u_code)
+    u_expr = Expression(u_code, degree=degree)
+    return u_expr
 
-    return u_D, f
-
-def vPoisson(nx=32,ny=32,debug=1):
+def vPoisson(nx=32,ny=32,knownf=0,knownu=1,kx=1,ky=1,ax=1,ay=1,alpha=pi/4,debug=1,seeplot=0):
     # Create mesh and define function space
     mesh = UnitSquareMesh(nx, ny)
     V = FunctionSpace(mesh, 'P', 1)
 
-    #pdb.set_trace()
     #printCoords(V)
 
-    l = 4
-    k = 4
-    kappa = Expression('exp(sin(k*pi*x[0]*x[1]))', degree=1, k=k)
-    #kappa = Expression('exp(sin(k*pi*x[0]) * sin(k*pi*x[1]))', degree=6, k=k)
+    x, y = sym.symbols('x[0], x[1]')
 
-    #plt.figure(2)
-    #c = plot(kappa, mesh=mesh)
-    #plt.colorbar(c)
+    if knownu:
+        # K: rotated ellipse
+        kappa_lam = lambda x,y: 0.01 + (((x-0.5)*cos(alpha)+(y-0.5)*sin(alpha))**2)/(ax**2) + (((x-0.5)*sin(alpha)-(y-0.5)*cos(alpha))**2)/(ay**2)
+        kappa_sym = kappa_lam(x,y)
+        # Assume exact solution is sin(kx*pi*x)*sin(ky*pi*y)
+        # Define boundary condition (exact solution) and rhs
+        u_lam = lambda x,y: sin(kx*pi*x)*sin(ky*pi*y)
+        u_sym = u_lam(x,y)
+        f_sym = sympydiff(kappa_sym, u_sym)
+        u_D = sympy2expression(u_sym, degree=4)
+        f = sympy2expression(f_sym, degree=1, printit=0)
+    elif knownf:
+        # K:
+        kappa_lam = lambda x,y: (1.01 + sin(kx*pi*x+pi/2) * sin(ky*pi*y+pi/2))*exp(-(ax*x+ay*y))
+        kappa_sym = kappa_lam(x,y)
+        # Assume f is 1000*[(x-0.5)^2+(y-0.5)^2] and bdc is constant 1.0
+        f = Expression('1000*(pow(x[0]-0.5,2)+pow(x[1]-0.5,2))',degree=1)
+        u_D = Constant(1.0)
 
-    # Define boundary condition and rhs
-    u_D, f = symdiff(l,k)
+    kappa = sympy2expression(kappa_sym, degree=1)
+
+    if seeplot > 1:
+        surfaceplot(nx, ny, project(kappa, V))
+        plt.figure()
+        c = plot(kappa, mesh=mesh,title='kappa')
+        plt.colorbar(c)
+        if knownu:
+            plt.figure()
+            c = plot(u_D, mesh=mesh,title='u_D')
+            plt.colorbar(c)
+        plt.figure()
+        c = plot(f, mesh=mesh,title='f')
+        plt.colorbar(c)
+        surfaceplot(nx, ny, project(f, V))
+        plt.show()
 
     def boundary(x, on_boundary):
         return on_boundary
@@ -119,42 +143,134 @@ def vPoisson(nx=32,ny=32,debug=1):
     #bc.apply(A, b)
 
     if debug > 0:
-        print('cond(A) =', LA.cond(A.array()))
-
-    Acsr = csr_matrix(A.array())
-
-    mmwrite('A.mtx',Acsr,symmetry='general')
-    numpy.savetxt("A.txt", A.array())
+        print('A is SPD ?', is_pos_def(A.array()))
+        print('cond_2(A) = %.2e' % LA.cond(A.array()))
 
     # Compute solution
     u = Function(V)
     solve(a == L, u, bc)
 
-    # Plot solution and mesh
-    #plt.figure(1)
-    #c = plot(u)
-    #plot(mesh)
-    #plt.colorbar(c)
+    if seeplot > 1:
+        # Plot solution and exact solution
+        plt.figure()
+        c = plot(u)
+        #plot(mesh)
+        plt.colorbar(c)
+        surfaceplot(nx, ny, project(u, V))
+        if knownu:
+            surfaceplot(nx, ny, project(u_D, V))
+        plt.show()
 
-    u2 = project(u, V)
-    surfaceplot(nx, ny, u2)
+    if debug > 0:
+        if knownu:
+            # Compute error in L2 norm
+            error_L2 = errornorm(u_D, u, 'L2')
+            print('error_L2 =', errornorm(u_D, u, 'L2'))
+        # Compute error in LA
+        A_array = A.array()
+        u_array = u.vector().get_local()
+        b_array = b.get_local()
+        r_array = b_array - A_array @ u_array
+        print('error_max =', numpy.linalg.norm(r_array))
 
-    u3 = project(u_D, V)
-    surfaceplot(nx, ny, u3)
+    if seeplot == 1:
+        plt.figure()
+        c = plot(kappa, mesh=mesh,title='kappa')
+        plt.colorbar(c)
+        plt.figure()
+        c = plot(u,title='u')
+        plt.colorbar(c)
+        if knownf == 0:
+            plt.figure()
+            c = plot(f, mesh=mesh,title='f')
+            plt.colorbar(c)
+        #plt.show()
 
-    # Compute error in L2 norm
-    error_L2 = errornorm(u_D, u, 'L2')
-    print('error_L2 =', errornorm(u_D, u, 'L2'))
+    # output CSR
+    #Acsr = csr_matrix(A.array())
+    #mmwrite('A.mtx',Acsr,symmetry='general')
+    #numpy.savetxt("A.txt", A.array())
 
-    # Compute error in LA
-    A_array = A.array()
-    u_array = u.vector().get_local()
-    b_array = b.get_local()
-    r_array = b_array - A_array @ u_array
-    print('error_max =', numpy.linalg.norm(r_array))
+    kappa_vertex = kappa.compute_vertex_values(mesh)
+    u_vertex = u.compute_vertex_values()
+    f_vertex = f.compute_vertex_values(mesh)
 
-    # Hold plot
-    plt.show()
+    return kappa_vertex, u_vertex, f_vertex
 
 if __name__ == '__main__':
-    vPoisson(nx=31,ny=31,debug=0)
+
+    # prob 0: known f (fixed), changing K, solve u
+    # prob 1: manufactured u (variable), compute f, changing K, solve u
+    prob = 0
+
+    nx=31
+    ny=31
+    n = (nx+1)*(ny+1)
+
+    # output file names
+    Kfn = "Kappa.txt"
+    ffn = "F.txt"
+    ufn = "U.txt"
+
+    na = 4
+    nh = 3
+    nk = 32
+
+    kappa_all = numpy.empty((0,n))
+    u_all = numpy.empty((0,n))
+    f_all = numpy.empty((0,n))
+
+    if prob == 1:
+        #  solution
+        alphas = [*range(0, na)]
+        alphas = [x/na*pi for x in alphas]
+        heights = [*range(1, nh+1)]
+        heights=2**numpy.array(heights)
+        #
+        for alpha in alphas:
+            for ay in heights:
+                for kx in range(1,nk+1):
+                    for ky in range(1,nk+1):
+                        kappa, u, f = vPoisson(nx=nx,ny=ny,knownf=0,knownu=1,kx=kx,ky=ky,ax=1,ay=ay,alpha=alpha,debug=0,seeplot=1)
+                        kappa_all = numpy.vstack((kappa_all, kappa.reshape(1,-1)))
+                        u_all = numpy.vstack((u_all, u.reshape(1,-1)))
+                        f_all = numpy.vstack((f_all, f.reshape(1,-1)))
+    else:
+        omega = numpy.linspace(1, 16, num=nk)
+        decay = numpy.linspace(0, 1, num=na)
+        counter=0
+        for kx in omega:
+            for ky in omega:
+                for ax in decay:
+                    for ay in decay:
+                        print(kx, ky, ax, ay)
+                        counter = counter + 1
+                        vPoisson(nx=31,ny=31,knownf=1,knownu=0,kx=kx,ky=ky,ax=ax,ay=ay,debug=1,seeplot=1)
+                        if counter == 7:
+                            plt.show()
+    plt.show()
+    #pdb.set_trace()
+
+    numpy.savetxt(Kfn, kappa_all)
+    numpy.savetxt(ufn, u_all)
+    if prob == 1:
+        numpy.savetxt(ffn, f_all)
+
+##############################################
+# Some interesting functions (on [0,1]x[0,1])
+##############################################
+
+#Marr (the Mexican Hat)
+#kappa = Expression('1/(pi*pow(k,4))*(1-(pow(x[0]-0.5,2)+pow(x[1]-0.5,2))/(2*pow(k,2)))*exp(-(pow(x[0]-0.5,2)+pow(x[1]-0.5,2))/(2*pow(k,2)))', degree=1, k=k)
+
+# 2-D Gaussian
+#sx = 0.25
+#sy = 0.25
+#ro = 0.0
+#kappa_lam = lambda x,y: 1/(2*pi*sx*sy*sqrt(1-(ro**2)))*exp(-1/(2*(1-(ro**2)))*(((x-0.5)/sx)**2-2*ro*(x-0.5)/sx*(y-0.5)/sy+((y-0.5)/sy)**2))
+
+# rotated ellipse
+#a = 0.25
+#b = 0.5
+#alpha = pi/4
+#kappa_lam = lambda x,y: (((x-0.5)*cos(alpha)+(y-0.5)*sin(alpha))**2)/(a**2) + (((x-0.5)*sin(alpha)-(y-0.5)*cos(alpha))**2)/(b**2)
