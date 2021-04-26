@@ -217,8 +217,12 @@ if __name__ == '__main__':
     nk = 32
 
     kappa_all = numpy.empty((0,n))
-    u_all = numpy.empty((0,n))
     f_all = numpy.empty((0,n))
+    u_all = numpy.empty((0,n))
+
+    #numpy.savetxt(Kfn, kappa_all)
+    #numpy.savetxt(ffn, f_all)
+    #numpy.savetxt(ufn, u_all)
 
     if prob == 1:
         #  solution
@@ -244,20 +248,37 @@ if __name__ == '__main__':
                 for kx in omega:
                     for ky in omega:
                         counter = counter + 1
+                        if counter <= 20000:
+                           continue
                         print('Prob %6d: kx %f ky %f ax %f ay %f' % (counter, kx, ky, ax, ay))
                         kappa, u, f = vPoisson(nx=31,ny=31,knownf=1,knownu=0,kx=kx,ky=ky,ax=ax,ay=ay,debug=0,seeplot=0)
                         kappa_all = numpy.vstack((kappa_all, kappa.reshape(1,-1)))
                         u_all = numpy.vstack((u_all, u.reshape(1,-1)))
                         f_all = numpy.vstack((f_all, f.reshape(1,-1)))
+                        if counter % 5000 == 0:
+                           with open(Kfn, "a") as f:
+                              numpy.savetxt(f, kappa_all)
+                           with open(ffn, "a") as f:
+                              numpy.savetxt(f, f_all)
+                           with open(ufn, "a") as f:
+                              numpy.savetxt(f, u_all)
+                           kappa_all = numpy.empty((0,n))
+                           u_all = numpy.empty((0,n))
+                           f_all = numpy.empty((0,n))
+
                         #if counter == 7:
                         #    input("Press any key to continue the program")
                         #    plt.show()
+
+    with open(Kfn, "a") as f:
+       numpy.savetxt(f, kappa_all)
+    with open(ffn, "a") as f:
+       numpy.savetxt(f, f_all)
+    with open(ufn, "a") as f:
+       numpy.savetxt(f, u_all)
+
     #plt.show()
     #pdb.set_trace()
-
-    numpy.savetxt(Kfn, kappa_all)
-    numpy.savetxt(ufn, u_all)
-    numpy.savetxt(ffn, f_all)
 
 ##############################################
 # Some interesting functions (on [0,1]x[0,1])
