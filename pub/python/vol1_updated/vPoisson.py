@@ -106,10 +106,11 @@ def vPoisson(nx=32,ny=32,knownf=0,knownu=1,kx=1,ky=1,ax=1,ay=1,alpha=pi/4,debug=
         f = sympy2expression(f_sym, degree=1, printit=0)
     elif knownf:
         # K:
-        kappa_lam = lambda x,y: (1.01 + sin(kx*pi*x+pi/2) * sin(ky*pi*y+pi/2))*exp(-(ax*x+ay*y))
+        kappa_lam = lambda x,y: (1.1 + sin(kx*pi*x+pi/2) * sin(ky*pi*y+pi/2))*exp(-(ax*x+ay*y))
         kappa_sym = kappa_lam(x,y)
         # Assume f is 1000*[(x-0.5)^2+(y-0.5)^2] and bdc is constant 1.0
-        f = Expression('1000*(pow(x[0]-0.5,2)+pow(x[1]-0.5,2))',degree=1)
+        #f = Expression('1000*(pow(x[0]-0.5,2)+pow(x[1]-0.5,2))',degree=1)
+        f = Expression('exp(-(pow(x[0]-0.5,2)+pow(x[1]-0.5,2)))',degree=1)
         u_D = Constant(1.0)
 
     kappa = sympy2expression(kappa_sym, degree=1)
@@ -211,8 +212,8 @@ if __name__ == '__main__':
     # prob 1: manufactured u (variable), compute f, changing K, solve u
     prob = 0
 
-    nx=31
-    ny=31
+    nx=63
+    ny=63
     n = (nx+1)*(ny+1)
 
     # output file names
@@ -251,17 +252,16 @@ if __name__ == '__main__':
         counter = 0
 
         #debug
-        for ax in decay:
-            for ay in decay:
-                for kx in omega:
-                    for ky in omega:
-                       if (counter == 14368):
-                          print('Prob %6d: kx %f ky %f ax %f ay %f' % (counter, kx, ky, ax, ay))
-                          kappa, u, f = vPoisson(nx=31,ny=31,knownf=1,knownu=0,kx=kx,ky=ky,ax=ax,ay=ay,debug=1,seeplot=1)
-                          pdb.set_trace()
-                       counter = counter + 1
-
-        pdb.set_trace()
+        #for ax in decay:
+            #for ay in decay:
+                #for kx in omega:
+                    #for ky in omega:
+                       #if (counter == 14368):
+                          #print('Prob %6d: kx %f ky %f ax %f ay %f' % (counter, kx, ky, ax, ay))
+                          #kappa, u, f = vPoisson(nx=31,ny=31,knownf=1,knownu=0,kx=kx,ky=ky,ax=ax,ay=ay,debug=1,seeplot=1)
+                          #pdb.set_trace()
+                       #counter = counter + 1
+        #pdb.set_trace()
         #debug end
 
         for ax in decay:
