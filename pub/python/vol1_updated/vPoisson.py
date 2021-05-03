@@ -19,21 +19,28 @@ from sympy import exp, sin, cos, pi, sqrt
 import sympy as sym
 import pdb
 
-def printCoords(V):
+def printCoords(V, mesh, ordering='Mesh', printfile=False):
     # note that the ordering of dof can be different from mesh vertices given by
-    # coordinates = mesh.coordinates()
+    # coords = mesh.coordinates()
     # the mapping between can be got by
     # v2d = vertex_to_dof_map(V)
-    coords = V.tabulate_dof_coordinates()
-    ndofs  = V.dim()
-    nnodes = coords.shape[0]
-    dim = coords.shape[1]
-    print("Printing coordinates for mesh with",ndofs,"nodes and dimension",dim)
-    header  = "%24d %24d" %(ndofs, dim)
-    if(dim == 2):
-        numpy.savetxt("mat.coords", coords, header=header, comments='', fmt="%24.15e %24.15e")
-    elif(dim == 3):
-        numpy.savetxt("mat.coords", coords, header=header, comments='', fmt="%24.15e %24.15e %24.15e")
+    if ordering == 'Mesh':
+        coords = mesh.coordinates()
+    elif ordering == 'dof':
+        coords = V.tabulate_dof_coordinates()
+
+    if printfile:
+        ndofs  = V.dim()
+        #nnodes = coords.shape[0]
+        dim = coords.shape[1]
+        print("Printing coordinates for mesh with",ndofs,"nodes and dimension",dim)
+        header  = "%24d %24d" %(ndofs, dim)
+        if(dim == 2):
+            numpy.savetxt("mat.coords", coords, header=header, comments='', fmt="%24.15e %24.15e")
+        elif(dim == 3):
+            numpy.savetxt("mat.coords", coords, header=header, comments='', fmt="%24.15e %24.15e %24.15e")
+
+    return coords
 
 
 def is_pos_def(A):
@@ -82,7 +89,7 @@ def vPoisson(nx=32,ny=32,knownf=0,knownu=1,kx=1,ky=1,ax=1,ay=1,alpha=pi/4,debug=
     mesh = UnitSquareMesh(nx, ny)
     V = FunctionSpace(mesh, 'P', 1)
 
-    #printCoords(V)
+    coords = printCoords(V, mesh, ordering='Mesh')
 
     x, y = sym.symbols('x[0], x[1]')
 
@@ -189,11 +196,14 @@ def vPoisson(nx=32,ny=32,knownf=0,knownu=1,kx=1,ky=1,ax=1,ay=1,alpha=pi/4,debug=
     # output CSR
     #Acsr = csr_matrix(A.array())
     #mmwrite('A.mtx',Acsr,symmetry='general')
+    # output dense
     #numpy.savetxt("A.txt", A.array())
 
     kappa_vertex = kappa.compute_vertex_values(mesh)
     u_vertex = u.compute_vertex_values()
     f_vertex = f.compute_vertex_values(mesh)
+
+    pdb.set_trace()
 
     return kappa_vertex, u_vertex, f_vertex
 
