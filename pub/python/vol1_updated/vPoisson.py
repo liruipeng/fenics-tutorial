@@ -203,8 +203,6 @@ def vPoisson(nx=32,ny=32,knownf=0,knownu=1,kx=1,ky=1,ax=1,ay=1,alpha=pi/4,debug=
     u_vertex = u.compute_vertex_values()
     f_vertex = f.compute_vertex_values(mesh)
 
-    pdb.set_trace()
-
     return kappa_vertex, u_vertex, f_vertex
 
 if __name__ == '__main__':
@@ -221,6 +219,8 @@ if __name__ == '__main__':
     Kfn = "Kappa.txt"
     ffn = "F.txt"
     ufn = "U.txt"
+    save_begin = 200000000
+    save_freq = 5000
 
     na = 5
     nh = 3
@@ -229,10 +229,6 @@ if __name__ == '__main__':
     kappa_all = numpy.empty((0,n))
     f_all = numpy.empty((0,n))
     u_all = numpy.empty((0,n))
-
-    #numpy.savetxt(Kfn, kappa_all)
-    #numpy.savetxt(ffn, f_all)
-    #numpy.savetxt(ufn, u_all)
 
     if prob == 1:
         #  solution
@@ -252,20 +248,35 @@ if __name__ == '__main__':
     else:
         omega = numpy.linspace(1, 16, num=nk)
         decay = numpy.linspace(0, 1, num=na)
-        counter=0
+        counter = 0
+
+        #debug
+        for ax in decay:
+            for ay in decay:
+                for kx in omega:
+                    for ky in omega:
+                       if (counter == 14368):
+                          print('Prob %6d: kx %f ky %f ax %f ay %f' % (counter, kx, ky, ax, ay))
+                          kappa, u, f = vPoisson(nx=31,ny=31,knownf=1,knownu=0,kx=kx,ky=ky,ax=ax,ay=ay,debug=1,seeplot=1)
+                          pdb.set_trace()
+                       counter = counter + 1
+
+        pdb.set_trace()
+        #debug end
+
         for ax in decay:
             for ay in decay:
                 for kx in omega:
                     for ky in omega:
                         counter = counter + 1
-                        if counter <= 20000:
+                        if counter <= save_begin:
                            continue
                         print('Prob %6d: kx %f ky %f ax %f ay %f' % (counter, kx, ky, ax, ay))
                         kappa, u, f = vPoisson(nx=31,ny=31,knownf=1,knownu=0,kx=kx,ky=ky,ax=ax,ay=ay,debug=0,seeplot=0)
                         kappa_all = numpy.vstack((kappa_all, kappa.reshape(1,-1)))
                         u_all = numpy.vstack((u_all, u.reshape(1,-1)))
                         f_all = numpy.vstack((f_all, f.reshape(1,-1)))
-                        if counter % 5000 == 0:
+                        if counter % save_freq == 0:
                            with open(Kfn, "a") as f:
                               numpy.savetxt(f, kappa_all)
                            with open(ffn, "a") as f:
