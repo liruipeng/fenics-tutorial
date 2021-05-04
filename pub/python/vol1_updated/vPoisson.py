@@ -89,7 +89,7 @@ def vPoisson(nx=32,ny=32,knownf=0,knownu=1,kx=1,ky=1,ax=1,ay=1,alpha=pi/4,debug=
     mesh = UnitSquareMesh(nx, ny)
     V = FunctionSpace(mesh, 'P', 1)
 
-    coords = printCoords(V, mesh, ordering='Mesh')
+    #coords = printCoords(V, mesh, ordering='Mesh', printfile=True)
 
     x, y = sym.symbols('x[0], x[1]')
 
@@ -106,11 +106,11 @@ def vPoisson(nx=32,ny=32,knownf=0,knownu=1,kx=1,ky=1,ax=1,ay=1,alpha=pi/4,debug=
         f = sympy2expression(f_sym, degree=1, printit=0)
     elif knownf:
         # K:
-        kappa_lam = lambda x,y: (1.1 + sin(kx*pi*x+pi/2) * sin(ky*pi*y+pi/2))*exp(-(ax*x+ay*y))
+        kappa_lam = lambda x,y: (1.01 + sin(kx*pi*x+pi/2) * sin(ky*pi*y+pi/2))*exp(-(ax*x+ay*y))
         kappa_sym = kappa_lam(x,y)
         # Assume f is 1000*[(x-0.5)^2+(y-0.5)^2] and bdc is constant 1.0
         #f = Expression('1000*(pow(x[0]-0.5,2)+pow(x[1]-0.5,2))',degree=1)
-        f = Expression('exp(-(pow(x[0]-0.5,2)+pow(x[1]-0.5,2)))',degree=1)
+        f = Expression('16*exp(-16*(pow(x[0]-0.5,2)+pow(x[1]-0.5,2)))',degree=1)
         u_D = Constant(1.0)
 
     kappa = sympy2expression(kappa_sym, degree=1)
@@ -212,16 +212,16 @@ if __name__ == '__main__':
     # prob 1: manufactured u (variable), compute f, changing K, solve u
     prob = 0
 
-    nx=63
-    ny=63
+    nx=31
+    ny=31
     n = (nx+1)*(ny+1)
 
     # output file names
     Kfn = "Kappa.txt"
     ffn = "F.txt"
     ufn = "U.txt"
-    save_begin = 200000000
-    save_freq = 5000
+    save_begin = 0
+    save_freq = 10000
 
     na = 5
     nh = 3
@@ -242,7 +242,7 @@ if __name__ == '__main__':
             for ay in heights:
                 for kx in range(1,nk+1):
                     for ky in range(1,nk+1):
-                        kappa, u, f = vPoisson(nx=nx,ny=ny,knownf=0,knownu=1,kx=kx,ky=ky,ax=1,ay=ay,alpha=alpha,debug=0,seeplot=1)
+                        kappa, u, f = vPoisson(nx=nx,ny=ny,knownf=0,knownu=1,kx=kx,ky=ky,ax=1,ay=ay,alpha=alpha,debug=0,seeplot=0)
                         kappa_all = numpy.vstack((kappa_all, kappa.reshape(1,-1)))
                         u_all = numpy.vstack((u_all, u.reshape(1,-1)))
                         f_all = numpy.vstack((f_all, f.reshape(1,-1)))
