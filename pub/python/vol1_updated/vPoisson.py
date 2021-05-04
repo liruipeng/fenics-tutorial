@@ -36,9 +36,9 @@ def printCoords(V, mesh, ordering='Mesh', printfile=False):
         print("Printing coordinates for mesh with",ndofs,"nodes and dimension",dim)
         header  = "%24d %24d" %(ndofs, dim)
         if(dim == 2):
-            numpy.savetxt("mat.coords", coords, header=header, comments='', fmt="%24.15e %24.15e")
+            numpy.savetxt("coords.txt", coords, header=header, comments='', fmt="%24.15e %24.15e")
         elif(dim == 3):
-            numpy.savetxt("mat.coords", coords, header=header, comments='', fmt="%24.15e %24.15e %24.15e")
+            numpy.savetxt("coords.txt", coords, header=header, comments='', fmt="%24.15e %24.15e %24.15e")
 
     return coords
 
@@ -89,7 +89,7 @@ def vPoisson(nx=32,ny=32,knownf=0,knownu=1,kx=1,ky=1,ax=1,ay=1,alpha=pi/4,debug=
     mesh = UnitSquareMesh(nx, ny)
     V = FunctionSpace(mesh, 'P', 1)
 
-    coords = printCoords(V, mesh, ordering='Mesh')
+    coords = printCoords(V, mesh, ordering='Mesh', printfile=True)
 
     x, y = sym.symbols('x[0], x[1]')
 
@@ -220,7 +220,7 @@ if __name__ == '__main__':
     Kfn = "Kappa.txt"
     ffn = "F.txt"
     ufn = "U.txt"
-    save_begin = 200000000
+    save_begin = 0
     save_freq = 5000
 
     na = 5
@@ -272,7 +272,7 @@ if __name__ == '__main__':
                         if counter <= save_begin:
                            continue
                         print('Prob %6d: kx %f ky %f ax %f ay %f' % (counter, kx, ky, ax, ay))
-                        kappa, u, f = vPoisson(nx=31,ny=31,knownf=1,knownu=0,kx=kx,ky=ky,ax=ax,ay=ay,debug=0,seeplot=0)
+                        kappa, u, f = vPoisson(nx=nx,ny=ny,knownf=1,knownu=0,kx=kx,ky=ky,ax=ax,ay=ay,debug=0,seeplot=0)
                         kappa_all = numpy.vstack((kappa_all, kappa.reshape(1,-1)))
                         u_all = numpy.vstack((u_all, u.reshape(1,-1)))
                         f_all = numpy.vstack((f_all, f.reshape(1,-1)))
