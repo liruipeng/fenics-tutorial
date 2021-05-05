@@ -84,6 +84,15 @@ def sympy2expression(u_sym,degree=1,printit=0):
     u_expr = Expression(u_code, degree=degree)
     return u_expr
 
+def flux(u, kappa):
+    "Return -kappa*grad(u) projected into same space as u"
+    V = u.function_space()
+    mesh = V.mesh()
+    degree = V.ufl_element().degree()
+    W = VectorFunctionSpace(mesh, 'P', degree)
+    flux_u = project(-kappa*grad(u), W)
+    return flux_u
+
 def vPoisson(nx=32,ny=32,knownf=0,knownu=1,kx=1,ky=1,ax=1,ay=1,alpha=pi/4,debug=1,seeplot=0):
     # Create mesh and define function space
     mesh = UnitSquareMesh(nx, ny)
@@ -211,7 +220,21 @@ def vPoisson(nx=32,ny=32,knownf=0,knownu=1,kx=1,ky=1,ax=1,ay=1,alpha=pi/4,debug=
     u_vertex = u.compute_vertex_values()
     f_vertex = f.compute_vertex_values(mesh)
 
-    return kappa_vertex, u_vertex, f_vertex
+    flux_u = flux(u, kappa)
+    flux_u_x, flux_u_y = flux_u.split(deepcopy=True)
+
+    if seeplot >= 1:
+        #plt.figure()
+        #plot(flux_u, title='flux_u')
+        plt.figure()
+        plot(flux_u_x, title='flux_u_x')
+        plt.figure()
+        plot(flux_u_y, title='flux_u_y')
+
+    flux_u_x_vertex = flux_u_x.compute_vertex_values()
+    flux_u_y_vertex = flux_u_y.compute_vertex_values()
+
+    return kappa_vertex, u_vertex, f_vertex, flux_u_x_vertex, flux_u_y_vertex
 
 if __name__ == '__main__':
 
@@ -227,6 +250,9 @@ if __name__ == '__main__':
     Kfn = "Kappa.txt"
     ffn = "F.txt"
     ufn = "U.txt"
+    flXfn = "FluxX.txt"
+    flYfn = "FluxY.txt"
+
     save_begin = 0
     save_freq = 10000
 
@@ -239,6 +265,8 @@ if __name__ == '__main__':
     kappa_all = numpy.empty((0,n))
     f_all = numpy.empty((0,n))
     u_all = numpy.empty((0,n))
+    flX_all = numpy.empty((0,n))
+    flY_all = numpy.empty((0,n))
 
     if prob == 1:
         #  solution
@@ -251,7 +279,7 @@ if __name__ == '__main__':
             for ay in heights:
                 for kx in range(1,nk+1):
                     for ky in range(1,nk+1):
-                        kappa, u, f = vPoisson(nx=nx,ny=ny,knownf=0,knownu=1,kx=kx,ky=ky,ax=1,ay=ay,alpha=alpha,debug=0,seeplot=0)
+                        kappa, u, f, flux_x, flux_y = vPoisson(nx=nx,ny=ny,knownf=0,knownu=1,kx=kx,ky=ky,ax=1,ay=ay,alpha=alpha,debug=0,seeplot=0)
                         kappa_all = numpy.vstack((kappa_all, kappa.reshape(1,-1)))
                         u_all = numpy.vstack((u_all, u.reshape(1,-1)))
                         f_all = numpy.vstack((f_all, f.reshape(1,-1)))
@@ -283,11 +311,13 @@ if __name__ == '__main__':
                            continue
                         print('Prob %6d: kx %f ky %f alp %f ax %f' % (counter, kx, ky, alp, ax))
                         #continue
-                        kappa, u, f = vPoisson(nx=nx,ny=ny,knownf=1,knownu=0,kx=kx,ky=ky,ax=ax,alpha=alp,debug=0,seeplot=0)
+                        kappa, u, f, flux_x, flux_y = vPoisson(nx=nx,ny=ny,knownf=1,knownu=0,kx=kx,ky=ky,ax=ax,alpha=alp,debug=0,seeplot=0)
                         #pdb.set_trace()
                         kappa_all = numpy.vstack((kappa_all, kappa.reshape(1,-1)))
                         u_all = numpy.vstack((u_all, u.reshape(1,-1)))
                         f_all = numpy.vstack((f_all, f.reshape(1,-1)))
+                        flX_all = numpy.vstack((flX_all, flux_x.reshape(1,-1)))
+                        flY_all = numpy.vstack((flY_all, flux_y.reshape(1,-1)))
                         if counter % save_freq == 0:
                            with open(Kfn, "a") as f:
                               numpy.savetxt(f, kappa_all)
@@ -295,9 +325,15 @@ if __name__ == '__main__':
                               numpy.savetxt(f, f_all)
                            with open(ufn, "a") as f:
                               numpy.savetxt(f, u_all)
+                           with open(flXfn, "a") as f:
+                              numpy.savetxt(f, flX_all)
+                           with open(flYfn, "a") as f:
+                              numpy.savetxt(f, flY_all)
                            kappa_all = numpy.empty((0,n))
                            u_all = numpy.empty((0,n))
                            f_all = numpy.empty((0,n))
+                           flX_all = numpy.empty((0,n))
+                           flY_all = numpy.empty((0,n))
 
                         #if counter == 7:
                         #    input("Press any key to continue the program")
@@ -309,7 +345,11 @@ if __name__ == '__main__':
        numpy.savetxt(f, f_all)
     with open(ufn, "a") as f:
        numpy.savetxt(f, u_all)
-
+    with open(flXfn, "a") as f:
+       numpy.savetxt(f, flX_all)
+    with open(flYfn, "a") as f:
+       numpy.savetxt(f, flY_all)
+       
     #plt.show()
     #pdb.set_trace()
 
