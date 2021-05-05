@@ -106,12 +106,19 @@ def vPoisson(nx=32,ny=32,knownf=0,knownu=1,kx=1,ky=1,ax=1,ay=1,alpha=pi/4,debug=
         f = sympy2expression(f_sym, degree=1, printit=0)
     elif knownf:
         # K:
-        kappa_lam = lambda x,y: (1.01 + sin(kx*pi*x+pi/2) * sin(ky*pi*y+pi/2))*exp(-(ax*x+ay*y))
+        # x' = cos(alpha)*(x-0.5)-sin(alpha)*(y-0.5)+0.5
+        # y' = sin(alpha)*(x-0.5)+cos(alpha)*(y-0.5)+0.5
+        #kappa_lam = lambda x,y: (1.01 + sin(kx*pi*(x')+pi/2) * sin(ky*pi*(y')+pi/2))*exp(-(ax*(x')+ay*(y')))
+        kappa_lam = lambda x,y: (1.01 + sin(kx*pi*(cos(alpha)*(x-0.5)-sin(alpha)*(y-0.5)+0.5)+pi/2) * sin(ky*pi*(sin(alpha)*(x-0.5)+cos(alpha)*(y-0.5)+0.5)+pi/2))*exp(-(ax*(cos(alpha)*(x-0.5)-sin(alpha)*(y-0.5)+0.5)+ay*(sin(alpha)*(x-0.5)+cos(alpha)*(y-0.5)+0.5)))
         kappa_sym = kappa_lam(x,y)
         # Assume f is 1000*[(x-0.5)^2+(y-0.5)^2] and bdc is constant 1.0
         #f = Expression('1000*(pow(x[0]-0.5,2)+pow(x[1]-0.5,2))',degree=1)
-        f = Expression('16*exp(-16*(pow(x[0]-0.5,2)+pow(x[1]-0.5,2)))',degree=1)
-        u_D = Constant(1.0)
+        #f = Expression('32*exp(-32*(pow(x[0]-0.5,2)+pow(x[1]-0.5,2)))',degree=1)
+        f = Expression('32*exp(-4*(pow(x[0]-0.25,2)+pow(x[1]-0.5,2)))',degree=1)
+        #f = Expression('16*exp(-16*pow(x[0]-x[1],2))',degree=1)
+        #f = Expression('16*exp(-16*pow(x[0]+x[1]-1,2))',degree=1)
+        #f = Expression('32*exp(-512*pow(x[0]+x[1]-1,2)*pow(x[0]-x[1],2))',degree=1)
+        u_D = Constant(0.0)
 
     kappa = sympy2expression(kappa_sym, degree=1)
 
@@ -223,9 +230,11 @@ if __name__ == '__main__':
     save_begin = 0
     save_freq = 10000
 
-    na = 5
+    na = 1#7
+    nk = 4#10
+    nd = 1#3
+
     nh = 3
-    nk = 32
 
     kappa_all = numpy.empty((0,n))
     f_all = numpy.empty((0,n))
@@ -247,32 +256,35 @@ if __name__ == '__main__':
                         u_all = numpy.vstack((u_all, u.reshape(1,-1)))
                         f_all = numpy.vstack((f_all, f.reshape(1,-1)))
     else:
-        omega = numpy.linspace(1, 16, num=nk)
-        decay = numpy.linspace(0, 1, num=na)
+        omega = numpy.linspace(1, 8, num=nk)
+        decay = numpy.linspace(0, 1, num=nd)
+        alphas = [*range(0, na)]
+        alphas = [x/na*pi for x in alphas]
         counter = 0
 
         #debug
-        #for ax in decay:
-            #for ay in decay:
-                #for kx in omega:
-                    #for ky in omega:
-                       #if (counter == 14368):
-                          #print('Prob %6d: kx %f ky %f ax %f ay %f' % (counter, kx, ky, ax, ay))
-                          #kappa, u, f = vPoisson(nx=31,ny=31,knownf=1,knownu=0,kx=kx,ky=ky,ax=ax,ay=ay,debug=1,seeplot=1)
-                          #pdb.set_trace()
-                       #counter = counter + 1
-        #pdb.set_trace()
+        for kx in omega:
+           for alp in alphas:
+              for ax in decay:
+                 print('Prob %6d: kx %f ky %f alp %f ax %f ay %f' % (counter, kx, kx, alp, ax, ax))
+                 kappa, u, f = vPoisson(nx=nx,ny=ny,knownf=1,knownu=0,kx=kx,ky=kx,ax=ax,ay=ax,alpha=alp,debug=0,seeplot=1)
+                 #pdb.set_trace()
+                 counter = counter + 1
+        pdb.set_trace()
         #debug end
 
-        for ax in decay:
-            for ay in decay:
-                for kx in omega:
-                    for ky in omega:
+        for kx in omega:
+           for ky in omega:
+              for alp in alphas:
+                 for ax in decay:
+                    for ay in decay:
                         counter = counter + 1
                         if counter <= save_begin:
                            continue
-                        print('Prob %6d: kx %f ky %f ax %f ay %f' % (counter, kx, ky, ax, ay))
-                        kappa, u, f = vPoisson(nx=nx,ny=ny,knownf=1,knownu=0,kx=kx,ky=ky,ax=ax,ay=ay,debug=0,seeplot=0)
+                        print('Prob %6d: kx %f ky %f alp %f ax %f ay %f' % (counter, kx, ky, alp, ax, ay))
+                        #continue
+                        kappa, u, f = vPoisson(nx=nx,ny=ny,knownf=1,knownu=0,kx=kx,ky=ky,ax=ax,ay=ay,alpha=alp,debug=0,seeplot=1)
+                        pdb.set_trace()
                         kappa_all = numpy.vstack((kappa_all, kappa.reshape(1,-1)))
                         u_all = numpy.vstack((u_all, u.reshape(1,-1)))
                         f_all = numpy.vstack((f_all, f.reshape(1,-1)))

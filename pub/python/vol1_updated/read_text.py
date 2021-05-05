@@ -20,7 +20,7 @@ def readtxt(Nx, Ny, fn):
 
 if __name__ == '__main__':
    nx = 32
-   dirpath='data2/'
+   dirpath='data3/'
    # input
    Kappa = readtxt(Nx=nx, Ny=nx, fn=os.path.join(dirpath,'Kappa.txt'))
    F = readtxt(Nx=nx, Ny=nx, fn=os.path.join(dirpath,'F.txt'))
@@ -28,7 +28,7 @@ if __name__ == '__main__':
    COO = readtxt(Nx=2, Ny=None, fn=os.path.join(dirpath,'coords.txt'))
    X = COO[1:,0].reshape(32,32)
    Y = COO[1:,1].reshape(32,32)
-   pdb.set_trace()
+   #pdb.set_trace()
    # output
-   np.savez(os.path.join(dirpath,'Poisson2.npz'), Kappa=Kappa, F=F, U=U, X=X, Y=Y)
+   np.savez(os.path.join(dirpath,'Poisson3.npz'), Kappa=Kappa, F=F, U=U, X=X, Y=Y)
 
