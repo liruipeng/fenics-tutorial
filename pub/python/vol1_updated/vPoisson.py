@@ -295,7 +295,7 @@ if __name__ == '__main__':
         #   for alp in alphas:
         #      for ax in decay:
         #         print('Prob %6d: kx %f ky %f alp %f ax %f' % (counter, kx, kx, alp, ax))
-        #         kappa, u, f = vPoisson(nx=nx,ny=ny,knownf=1,knownu=0,kx=kx,ky=kx,ax=ax,alpha=alp,debug=0,seeplot=1)
+        #         kappa, u, f, flux_x, flux_y = vPoisson(nx=nx,ny=ny,knownf=1,knownu=0,kx=kx,ky=kx,ax=ax,alpha=alp,debug=0,seeplot=1)
         #         #plt.show()
         #         pdb.set_trace()
         #         counter = counter + 1
@@ -349,7 +349,7 @@ if __name__ == '__main__':
        numpy.savetxt(f, flX_all)
     with open(flYfn, "a") as f:
        numpy.savetxt(f, flY_all)
-       
+
     #plt.show()
     #pdb.set_trace()
 
