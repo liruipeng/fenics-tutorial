@@ -25,10 +25,12 @@ if __name__ == '__main__':
    Kappa = readtxt(Nx=nx, Ny=nx, fn=os.path.join(dirpath,'Kappa.txt'))
    F = readtxt(Nx=nx, Ny=nx, fn=os.path.join(dirpath,'F.txt'))
    U = readtxt(Nx=nx, Ny=nx, fn=os.path.join(dirpath,'U.txt'))
+   FluxX = readtxt(Nx=nx, Ny=nx, fn=os.path.join(dirpath,'FluxX.txt'))
+   FluxY = readtxt(Nx=nx, Ny=nx, fn=os.path.join(dirpath,'FluxY.txt'))
    COO = readtxt(Nx=2, Ny=None, fn=os.path.join(dirpath,'coords.txt'))
    X = COO[1:,0].reshape(32,32)
    Y = COO[1:,1].reshape(32,32)
    #pdb.set_trace()
    # output
-   np.savez(os.path.join(dirpath,'Poisson3.npz'), Kappa=Kappa, F=F, U=U, X=X, Y=Y)
+   np.savez(os.path.join(dirpath,'Poisson3.npz'), Kappa=Kappa, F=F, U=U, X=X, Y=Y, FluxX=FluxX, FluxY=FluxY)
 
