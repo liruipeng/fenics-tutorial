@@ -20,7 +20,7 @@ def readtxt(Nx, Ny, fn):
 
 if __name__ == '__main__':
    nx = 32
-   dirpath='data3/'
+   dirpath='data4/'
    # input
    Kappa = readtxt(Nx=nx, Ny=nx, fn=os.path.join(dirpath,'Kappa.txt'))
    F = readtxt(Nx=nx, Ny=nx, fn=os.path.join(dirpath,'F.txt'))

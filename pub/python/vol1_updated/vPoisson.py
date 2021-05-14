@@ -310,7 +310,7 @@ if __name__ == '__main__':
                         counter = counter + 1
                         if counter <= save_begin:
                            continue
-                        print('Prob %6d: kx %f ky %f alp %f ax %f' % (counter, kx, ky, alp, ax))
+                        print('Prob %6d: kx %f ky %f alp %f ax %f' % (counter-1, kx, ky, alp, ax))
                         #continue
                         kappa, u, f, flux_x, flux_y = vPoisson(nx=nx,ny=ny,knownf=1,knownu=0,kx=kx,ky=ky,ax=ax,alpha=alp,debug=0,seeplot=0)
                         #pdb.set_trace()
