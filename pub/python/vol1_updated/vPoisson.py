@@ -117,9 +117,8 @@ def vPoisson(nx=32,ny=32,knownf=0,knownu=1,kx=1,ky=1,ax=1,ay=1,alpha=pi/4,debug=
         # K:
         # x' = cos(alpha)*(x-0.5)-sin(alpha)*(y-0.5)+0.5
         # y' = sin(alpha)*(x-0.5)+cos(alpha)*(y-0.5)+0.5
-        #kappa_lam = lambda x,y: (1.01 + sin(kx*pi*(x)+pi/2) * sin(ky*pi*(y)+pi/2))*exp(-(ax*(x)+ay*(y)))
-        #kappa_lam = lambda x,y: exp( ax * cos(kx*pi*(x)) * cos(ky*pi*(y)) )
-        kappa_lam = lambda x,y: exp( ax * cos(kx*pi*(cos(alpha)*(x-0.25)-sin(alpha)*(y-0.25)+0.25)) * cos(ky*pi*(sin(alpha)*(x-0.25)+cos(alpha)*(y-0.25)+0.25)) )
+        #kappa_lam = lambda x,y: 1.1 + cos(kx*pi*(x+ax)) * cos(ky*pi*(y+ax))
+        kappa_lam = lambda x,y: 1.1 + cos(kx*pi*(cos(alpha)*(x-0.5)-sin(alpha)*(y-0.5)+0.5+ax)) * cos(ky*pi*(sin(alpha)*(x-0.5)+cos(alpha)*(y-0.5)+0.5+ax))
         kappa_sym = kappa_lam(x,y)
         # Assume f is 1000*[(x-0.5)^2+(y-0.5)^2] and bdc is constant 0.0
         #f = Expression('32*exp(-32*(pow(x[0]-0.5,2)+pow(x[1]-0.5,2)))',degree=1)
@@ -128,6 +127,9 @@ def vPoisson(nx=32,ny=32,knownf=0,knownu=1,kx=1,ky=1,ax=1,ay=1,alpha=pi/4,debug=
         #f = Expression('16*exp(-16*pow(x[0]+x[1]-1,2))',degree=1)
         #f = Expression('32*exp(-512*pow(x[0]+x[1]-1,2)*pow(x[0]-x[1],2))',degree=1)
         u_D = Constant(0.0)
+
+        #kappa_lam = lambda x,y: (1.01 + sin(kx*pi*(x)+pi/2) * sin(ky*pi*(y)+pi/2))*exp(-(ax*(x)+ay*(y)))
+        #kappa_lam = lambda x,y: exp( ax * cos(kx*pi*(x)) * cos(ky*pi*(y)) )
 
     kappa = sympy2expression(kappa_sym, degree=1)
 
@@ -223,7 +225,7 @@ def vPoisson(nx=32,ny=32,knownf=0,knownu=1,kx=1,ky=1,ax=1,ay=1,alpha=pi/4,debug=
     flux_u = flux(u, kappa)
     flux_u_x, flux_u_y = flux_u.split(deepcopy=True)
 
-    if seeplot >= 1:
+    if seeplot > 1:
         #plt.figure()
         #plot(flux_u, title='flux_u')
         plt.figure()
@@ -284,16 +286,15 @@ if __name__ == '__main__':
                         u_all = numpy.vstack((u_all, u.reshape(1,-1)))
                         f_all = numpy.vstack((f_all, f.reshape(1,-1)))
     else:
-        omega = numpy.linspace(1, 8, num=nk)
-        decay = numpy.linspace(1, 4, num=nd)
-        alphas = [*range(0, na)]
-        alphas = [x/na*pi for x in alphas]
+        omega = numpy.linspace(0.5, 4, num=nk)
+        shift = numpy.linspace(0, 0.5, num=nd+1)[0:-1]
+        alphas = numpy.linspace(0, 0.5, num=na+1)[0:-1]*pi
         counter = 0
 
         #debug
         #for kx in omega:
         #   for alp in alphas:
-        #      for ax in decay:
+        #      for ax in shift:
         #         print('Prob %6d: kx %f ky %f alp %f ax %f' % (counter, kx, kx, alp, ax))
         #         kappa, u, f, flux_x, flux_y = vPoisson(nx=nx,ny=ny,knownf=1,knownu=0,kx=kx,ky=kx,ax=ax,alpha=alp,debug=0,seeplot=1)
         #         #plt.show()
@@ -305,7 +306,7 @@ if __name__ == '__main__':
         for kx in omega:
            for ky in omega:
               for alp in alphas:
-                 for ax in decay:
+                 for ax in shift:
                         counter = counter + 1
                         if counter <= save_begin:
                            continue
